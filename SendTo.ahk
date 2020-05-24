@@ -1,16 +1,16 @@
 /*
  * @Author     : @fwt(chn.fwt@foxmail.com(QQ:408576175))
  * @Modified by: Jiang Hui (jianghui@zigui.me)
- * @Link       :
+ * @Link       : https://github.com/536/SendTo
  * @Version    : 2019-02-02 21:06:30
  */
 
 #NoEnv
 #SingleInstance, force
-; #NoTrayIcon
 SetWorkingDir, % A_ScriptDir
 
-global U_SendTo := A_AppData "\Microsoft\Windows\SendTo"
+global DIR_SENDTO := A_AppData "\Microsoft\Windows\SendTo"
+global ADD_FOLDER := "__AddFolder.lnk"
 /*
 AddFolder
     foldername
@@ -29,9 +29,16 @@ Move
     src dst
 */
 Menu, Menu_Add, UseErrorLevel
-Menu, Menu_Add, Add, CopyTo, label_Menu_Add
-Menu, Menu_Add, Add, LinkTo, label_Menu_Add
-Menu, Menu_Add, Add, MoveTo, label_Menu_Add
+Menu, Menu_Add, Add, About SendTo, label_Menu_About
+Menu, Menu_Add, Icon, About SendTo, % A_ScriptDir "\sources\SendTo.ico"
+Menu, Menu_Add, Add
+Menu, Menu_Add, Add, LinkTo, label_Menu_LinkTo
+Menu, Menu_Add, Icon, LinkTo, % A_ScriptDir "\sources\LinkTo.ico"
+Menu, Menu_Add, Add
+Menu, Menu_Add, Add, CopyTo, label_Menu_CopyTo
+Menu, Menu_Add, Icon, CopyTo, % A_ScriptDir "\sources\CopyTo.ico"
+Menu, Menu_Add, Add, MoveTo, label_Menu_MoveTo
+Menu, Menu_Add, Icon, MoveTo, % A_ScriptDir "\sources\MoveTo.ico"
 
 if A_Args.Length()
 {
@@ -39,52 +46,32 @@ if A_Args.Length()
     ; {
     ;     msgbox % "A_Args[" i "] is`n" v
     ; }
-    if (A_Args[1] = "Add")
+    for i, v in A_Args
     {
-        if FileExist(A_Args[2]) && (file_IsFolderOrFile(A_Args[2]) = "folder")
-            Menu, Menu_Add, Show
-    }
-    else if (A_Args[1] = "CopyTo")
-    {
-        if FileExist(A_Args[2])
+        if (A_Args[1] != "Add" And i = 2)
         {
-            if FileExist(A_Args[3])
-            {
-                CopyTo(A_Args[3], A_Args[2])
-                run % A_Args[2]
-            }
-            Else
-                run % A_Args[2]
+            Run % A_Args[2]
         }
-    }
-    Else if (A_Args[1] = "Linkto")
-    {
-        if FileExist(A_Args[2])
+        Else if (i > 1)
         {
-            if FileExist(A_Args[3])
-            {
-                LinkTo(A_Args[3], A_Args[2])
-                run % A_Args[2]
-            }
-            Else
-                run % A_Args[2]
+            if (A_Args[1] = "Add" And FileExist(A_Args[i]) And file_IsFolderOrFile(A_Args[i]) = "folder")
+                Menu, Menu_Add, Show
         }
-    }
-    Else if (A_Args[1] = "MoveTo")
-    {
-        if FileExist(A_Args[2])
+        Else if (i > 2)
         {
-            if FileExist(A_Args[3])
+            if FileExist(A_Args[2]) And FileExist(A_Args[i])
             {
-                MoveTo(A_Args[3], A_Args[2])
-                run % A_Args[2]
+                if (A_Args[1] = "Linkto")
+                    Linkto(A_Args[i], A_Args[2])
+                Else If (A_Args[1] = "CopyTo")
+                    CopyTo(A_Args[i], A_Args[2])
+                Else If (A_Args[1] = "MoveTo")
+                    MoveTo(A_Args[i], A_Args[2])
             }
-            Else
-                run % A_Args[2]
         }
     }
 }
-else if fileexist(U_SendTo "\__AddFolder.lnk")
+else if fileexist(DIR_SENDTO "\" ADD_FOLDER)
 {
     msgbox, 4, , % A_ScriptName " is installed, do you want to uninstall it?"
     IfMsgBox, Yes
@@ -101,32 +88,46 @@ return
 label_install:
     FileCreateShortcut
         , % A_AhkPath
-        , % U_SendTo "\__AddFolder.lnk"
+        , % DIR_SENDTO "\" ADD_FOLDER
         ,
         , % """" A_ScriptFullPath """ Add"
         , % "Add Folder"
-        , % A_ScriptDir "\" file_FileNameNoExt(A_ScriptFullPath) ".ico"
+        , % A_ScriptDir "\sources\" file_FileNameNoExt(A_ScriptFullPath) ".ico"
 
     MsgBox Success!
-    Run % U_SendTo
+    Run % DIR_SENDTO
     Return
 label_uninstall:
     Return
 
-label_Menu_Add:
-    if (A_Args[2] = A_Desktop)
-        IconNumber := 105
-    Else
-        IconNumber := 4
+label_Menu_About:
+    Return
+label_Menu_LinkTo:
     FileCreateShortcut
         , % """" A_AhkPath """"
-        , % U_SendTo "\_" A_ThisMenuItem "_" file_FileNameNoExt(A_Args[2]) ".lnk"
+        , % DIR_SENDTO "\_" A_ThisMenuItem "_" file_FileNameNoExt(A_Args[2]) ".lnk"
         ,
         , % """" A_ScriptFullPath """ " A_ThisMenuItem " """ A_Args[2] """"
-        , % "Description"
-        , % "imageres.dll"
+        , % "Create Link to directory: """ A_Args[2] """"
+        , % A_ScriptDir "\sources\LinkTo.ico"
+    Return
+label_Menu_CopyTo:
+    FileCreateShortcut
+        , % """" A_AhkPath """"
+        , % DIR_SENDTO "\_" A_ThisMenuItem "_" file_FileNameNoExt(A_Args[2]) ".lnk"
         ,
-        , % IconNumber
+        , % """" A_ScriptFullPath """ " A_ThisMenuItem " """ A_Args[2] """"
+        , % "Copy selected files to directory: """ A_Args[2] """"
+        , % A_ScriptDir "\sources\CopyTo.ico"
+    Return
+label_Menu_MoveTo:
+    FileCreateShortcut
+        , % """" A_AhkPath """"
+        , % DIR_SENDTO "\_" A_ThisMenuItem "_" file_FileNameNoExt(A_Args[2]) ".lnk"
+        ,
+        , % """" A_ScriptFullPath """ " A_ThisMenuItem " """ A_Args[2] """"
+        , % "Move selected files to directory: """ A_Args[2] """"
+        , % A_ScriptDir "\sources\MoveTo.ico"
     Return
 
 LinkTo(src, dst) {
